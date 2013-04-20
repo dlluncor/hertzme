@@ -86,7 +86,7 @@
 
 		Ctrl.prototype.findParkingMaybe = function() {
 		      var bigDiff = this.ind - this.findParkingCalled;
-		      if (bigDiff > 120) { // Wait another 10 seconds before calling another.
+		      if (bigDiff > 100) { // Wait another 10 seconds before calling another.
 		        this.findParkingCalled = 0; // can call it again.
 		      }
 		      if (this.findParkingCalled == 0) {
@@ -170,6 +170,6 @@
 		    var response = {vehicle_status: {speed: speed},
 				    gps_status: {latitude: 100, longitude: 101}};
 		    onMessageHandler({data: JSON.stringify(response)});
-		    console.log(ctrl.curLatLong());
+		    //console.log(ctrl.curLatLong());
 		  }
 		}
