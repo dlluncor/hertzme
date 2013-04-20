@@ -1,0 +1,125 @@
+<head>
+<script src="http://code.jquery.com/jquery-1.9.1.min.js"></script>
+<script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAmDp2OhTdPVdoEr2tQP0zBohyyMvJrbq8&sensor=false"></script>
+<style>
+html, body, #map-canvas {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+#info {
+  position: absolute;
+}
+</style>
+</head>
+
+<body>
+<div id="map-canvas"></div>
+<script type="text/javascript">
+var stations, hertz, parking;
+{% if gas %}
+stations = {{gas}};
+{% endif %}
+{% if hertz %}
+hertz = {{hertz}};
+{% endif %}
+{% if parking %}
+parking = {{parking}};
+{% endif %}
+
+ 
+var map;
+var lastOpen;
+var directionsDisplay;
+var directionsService = new google.maps.DirectionsService();
+function initialize() {
+  directionsDisplay = new google.maps.DirectionsRenderer({'map':map});
+  var mapOptions = {
+    zoom: 13,
+    center: new google.maps.LatLng({{lat}}, {{lon}}),
+    mapTypeId: google.maps.MapTypeId.ROADMAP
+  };
+  map = new google.maps.Map(document.getElementById('map-canvas'),
+      mapOptions);
+  directionsDisplay.setMap(map);
+
+  var colorThing = function(thing, symb, color) {
+    if (!thing) return;
+    for (var i = 0; i < thing.length; ++i) {
+      var s = thing[i];
+      createMarker(new google.maps.LatLng(s[0], s[1]),
+                   s[2], '<b>' + s[2] + ' (' + symb + s[4] +')</b><br />' + s[3], color);
+    }
+  };
+  colorThing(stations, '$', 'blue');
+  colorThing(hertz, '', 'yellow');
+  colorThing(parking, '$', 'green');
+  if (hertz && stations) calcRoute();
+}
+
+function calcRoute() {
+  var bestHertz = hertz[hertz.length-1];
+  var bestGas = stations[0];
+  var start = new google.maps.LatLng({{lat}}, {{lon}});
+  var end = new google.maps.LatLng(bestHertz[0], bestHertz[1]);
+  var request = {
+      origin:start,
+      destination:end,
+      travelMode: google.maps.DirectionsTravelMode.DRIVING,
+      waypoints: [{
+        location: new google.maps.LatLng(bestGas[0], bestGas[1]),
+        stopover: true
+      }]
+  };
+  directionsService.route(request, function(response, status) {
+    if (status == google.maps.DirectionsStatus.OK) {
+      directionsDisplay.setDirections(response);
+      var cost = computeTotalDistance(response, bestGas[4]);
+      lastOpen.setContent(lastOpen.getContent() + '<br>' + cost);
+      google.maps.event.trigger(map, 'resize');
+    }
+  });
+}
+
+function computeTotalDistance(result, cost) {
+  var total = 0;
+  var myroute = result.routes[0];
+  for (i = 0; i < myroute.legs.length; i++) {
+    total += myroute.legs[i].distance.value;
+  }
+  var miles = total / 1000 * 0.621371;
+  var MPG = 40.0;
+  var totalCost = parseFloat(cost) / MPG * miles;
+  return miles.toFixed(2) + " mi. At " + MPG + "MPG and " + cost + " per gallon, that's $" + totalCost.toFixed(2); 
+}
+
+function createMarker(latlng, name, html, color) {
+  var infowindow = new google.maps.InfoWindow({ 
+    size: new google.maps.Size(150,50)
+  });
+  var contentString = html;
+  var marker = new google.maps.Marker({
+    position: latlng,
+    map: map,
+    icon: {
+        path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
+        strokeColor: color,
+        scale: 3
+    },
+  });
+
+  google.maps.event.addListener(marker, 'click', function() {
+      if (lastOpen) lastOpen.close();
+      infowindow.setContent(contentString);
+      infowindow.open(map, marker);
+      lastOpen = infowindow;
+  });
+  if (!lastOpen) {
+    google.maps.event.trigger(marker, 'click');
+  }
+  return marker;
+}
+
+google.maps.event.addDomListener(window, 'load', initialize);
+</script>
+</body>
