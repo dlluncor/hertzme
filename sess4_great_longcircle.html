@@ -7,8 +7,77 @@
 
 		<script type="text/javascript">
 		var ws;
-                var ind = 0;
-		var messages = [];
+		Ctrl = function() {
+		  this.ind = 0;
+		  this.startNow = 0; // where to start cutting off the mean from.
+		  this.sumNowSpeed = 0;
+		  this.startSlow = 20; // twenty events later find out what speed is.
+		  this.sumSlowSpeed = 0;
+		  
+		  this.slowDownCalled = false;
+		  this.lastTimeCalled = 0;
+		  this.messages = [];
+		};
+
+		Ctrl.prototype.ask = function(response) {
+			this.messages.push(response);
+			this.ind += 1;
+
+			if (this.ind < 41) {return;}
+			// I have enough time to start computing.
+			if (this.ind == 42) {
+			  // set up averages.
+			  for (var i = this.startNow; i < this.startNow + 20; i++) { this.sumNowSpeed += this.getSpeed(i) ; }
+			  for (var i = this.startSlow; i < this.startSlow + 20; i++) { this.sumSlowSpeed += this.getSpeed(i) ; }
+			}
+
+			var rightNowSpeed = this.getSpeed(this.ind - 1);
+			if (rightNowSpeed > 9) {
+
+			// Now remove subtract the cut off value and cutoff + 20 value.
+			var nowRemoveVal = this.getSpeed(this.startNow);
+			this.sumNowSpeed += this.getSpeed(this.startNow + 20) - nowRemoveVal;			
+
+			var slowRemoveVal = this.getSpeed(this.startSlow);
+			this.sumSlowSpeed += this.getSpeed(this.startSlow + 20) - slowRemoveVal;
+
+			// Test differences in average speeds.
+			var avgNow = this.sumNowSpeed / 20;
+			var avgSlow = this.sumSlowSpeed / 20;
+			var objFunc = avgNow - avgSlow;
+			//window.console.log(objFunc);
+			if (objFunc > 5) {
+				// You have slowed down significantly now trigger find parking.
+				if (this.lastTimeCalled == false) {
+				  this.findParking();
+				  this.lastTimeCalled = true;
+				  this.lastTimeCalled = this.ind;
+				}
+			}
+
+			}
+
+			if ((this.ind - this.lastTimeCalled) > 100) {
+			  this.lastTimeCalled = false;
+			  // we can reset it every 100 seconds or so.
+			}
+	
+			// Increment values.
+			this.startNow += 1;
+			this.startSlow += 1;
+		};
+
+		Ctrl.prototype.getSpeed = function(i) {
+			var msg = this.messages[i];
+			return msg.vehicle_status.speed;
+		};
+
+		Ctrl.prototype.findParking = function() {
+			console.log('Finding parking at ' + this.ind);
+		};
+
+		var ctrl = new Ctrl();
+
                 function mess(msg) {
                   var myMsg = {index: ind, txt: msg};
                   window.console.log(myMsg);
@@ -37,12 +106,11 @@
 		function onMessageHandler(msg) {
 			var response = JSON.parse(msg.data);
 			//console.log(response);
-		        messages.push(msg.data);
                         var mydate = new Date();
-			response['myind'] = ind;
+			response['myind'] = ctrl.ind;
  			response['mydate'] = mydate;
+			ctrl.ask(response);
 			appendTxtNode(JSON.stringify(response));
-			ind = ind + 1;
   		}
 
 		function init() {
@@ -57,16 +125,22 @@
 		}
 
                 function init2() {
-				window.setTimeout(function() {
-					var msg = {hi: 0};
-					onMessageHandler({data: JSON.stringify(msg)});
-				}, 500);
+		  var speeds = [19, 13];
+		  var upTo = 0;
+		  var curInd = 0;
+		  for (var i = 0; i < 300; i++) {
+		    var speed = speeds[curInd];
+	            upTo += 1;
+		    if (upTo > 50) {speed = speeds[curInd];  upTo = 0; if (curInd == 0) {curInd = 1;} else {curInd = 0;};}
+		    var response = {vehicle_status: {speed: speed}};
+		    onMessageHandler({data: JSON.stringify(response)});
+		  }
 		}
 		</script>
 
 	</head>
 
-	<body onload="init();">
+	<body onload="init2();">
 
 
 		<div class="row">
