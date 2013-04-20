@@ -11,6 +11,8 @@
 		  this.slowDownCalled = false;
 		  this.findParkingCalled = 0; // index at which find parking was called.
 		  this.messages = [];
+		
+		  this.coastingRangeTime = 0; // number of times I am coasting.
 		};
 
 		// Trigger find parking when you are going below 18 mph on average,
@@ -31,6 +33,16 @@
 			var rightNowSpeed = this.getSpeed(this.ind - 1);
 			var prevSpeed = this.getSpeed(this.ind - 2);
 			if (rightNowSpeed > 9) {
+			// Using Akiva heuristic 1.
+			if (rightNowSpeed > 13 && rightNowSpeed < 18) {
+			  this.coastingRangeTime += 1;	
+			} else {
+			  this.coastingRangeTime = 0;
+			}
+			// If we have been coasting for lets say 10 seconds = 70 beats.
+			if (this.coastingRangeTime > 69) {
+			  this.findParkingMaybe(); 
+			}
 
 			// Now remove subtract the cut off value and cutoff + 20 value.
 			var nowRemoveVal = this.getSpeed(this.startNow);
@@ -58,14 +70,7 @@
 					this.slowDownCalled = false;
 				    }
 				    if (this.coastingTimes > 20) { // Coast for 3 seconds?
-				      var bigDiff = this.ind - this.findParkingCalled;
-				      if (bigDiff > 100) { // Wait another 10 seconds before calling another.
-				        this.findParkingCalled = 0; // can call it again.
-				      }
-				      if (this.findParkingCalled == 0) {
-				        this.findParking();
-				        this.findParkingCalled = this.ind;
-				      }
+				      this.findParkingMaybe();
 			            }
 				}
 				
@@ -77,6 +82,17 @@
 			// Increment values.
 			this.startNow += 1;
 			this.startSlow += 1;
+		};
+
+		Ctrl.prototype.findParkingMaybe = function() {
+		      var bigDiff = this.ind - this.findParkingCalled;
+		      if (bigDiff > 120) { // Wait another 10 seconds before calling another.
+		        this.findParkingCalled = 0; // can call it again.
+		      }
+		      if (this.findParkingCalled == 0) {
+		        this.findParking();
+		        this.findParkingCalled = this.ind;
+		      }
 		};
 
 		Ctrl.prototype.getSpeed = function(i) {
