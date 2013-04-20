@@ -50,7 +50,7 @@
 			}
 			// If we have been coasting for lets say 10 seconds = 70 beats.
 			if (this.coastingRangeTime > 69) {
-			  this.findParkingMaybe(); 
+			  this.findParkingMaybe();
 			}
 
 			// Now remove subtract the cut off value and cutoff + 20 value.
@@ -120,14 +120,13 @@
 			console.log('Finding parking at ' + this.ind);
 		};
 
-		var ctrl = new Ctrl();
-
-                function mess(msg) {
+                Ctrl.prototype.mess = function(msg) {
                   var myMsg = {index: ind, txt: msg};
                   window.console.log(myMsg);
-                  appendTxtNode(JSON.stringify(myMsg));
-                }
-		function appendTxtNode(msg) {
+                  this.appendTxtNode(JSON.stringify(myMsg));
+                };
+
+		Ctrl.prototype.appendTxtNode = function(msg) {
 			var table = document.getElementById("messagesTable");
 			var txtNode = document.createTextNode(msg);
 			var trNode = document.createElement('tr');
@@ -137,55 +136,58 @@
 			table.appendChild(trNode);
 			trNode.appendChild(tdNode1);
 			tdNode1.appendChild(txtNode);
-		}
-		function doSend() {
+		};
+
+		Ctrl.prototype.doSend = function() {
 			var msg = $('#sendmsg').val();
 			if (!msg.length) {
 				return;
 			}
 			ws.send(msg);
 			$('#sendmsg').val('');
-		}
+		};
 
-		function onMessageHandler(msg) {
+		Ctrl.prototype.onMessageHandler = function(msg) {
 			var response = JSON.parse(msg.data);
 			//console.log(response);
                         var mydate = new Date();
 			response['myind'] = ctrl.ind;
  			response['mydate'] = mydate;
-			ctrl.ask(response);
-			appendTxtNode(JSON.stringify(response));
-  		}
+			this.ask(response);
+			this.appendTxtNode(JSON.stringify(response));
+  		};
 
-		function init() {
+		Ctrl.prototype.init = function() {
 			ws = new WebSocket('ws://192.168.150.1/notif');
 			ws.onopen = function(e) {
 				appendTxtNode('Socket opened');
 			};
-			ws.onmessage = onMessageHandler;
+			ws.onmessage = this.onMessageHandler;
 			ws.onclose = function(e) {
 				appendTxtNode('Socket closed');
 			};
-		}
+		};
 
-		function init3() {
+		Ctrl.prototype.init3 = function() {
 		  for (var i = 0; i < OUTPUT.length; i++) {
 		    var data = OUTPUT[i];
-		    onMessageHandler({data: JSON.stringify(data)});
+		    this.onMessageHandler({data: JSON.stringify(data)});
 		  }
-		}
+		};
 
-                function init2() {
+                Ctrl.prototype.init2 = function() {
 		  var speeds = [17, 10];
 		  var upTo = 0;
 		  var curInd = 0;
 		  for (var i = 0; i < 300; i++) {
-		    var speed = speeds[curInd];
+		    var speed = speeds[curInd] / 0.62;
 	            upTo += 1;
 		    if (upTo > 50) {speed = speeds[curInd];  upTo = 0; if (curInd == 0) {curInd = 1;} else {curInd = 0;};}
 		    var response = {vehicle_status: {speed: speed},
 				    gps_status: {latitude: 100, longitude: 101}};
-		    onMessageHandler({data: JSON.stringify(response)});
+		    this.onMessageHandler({data: JSON.stringify(response)});
 		    //console.log(ctrl.curLatLong());
 		  }
-		}
+		};
+
+		var ctrl = new Ctrl();
