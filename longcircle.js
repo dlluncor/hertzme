@@ -19,6 +19,11 @@
 		// You've slowed down signifcantly, by 5 mph, and you are going at least
                 // less than 18 and more than 9 for 3 seconds.
 		Ctrl.prototype.ask = function(response) {
+			// Throw out random messages.
+			if (('vehicle_status' in response) == false) {
+			  return;
+			}
+
 			this.messages.push(response);
 			this.ind += 1;
 
@@ -26,8 +31,12 @@
 			// I have enough time to start computing.
 			if (this.ind == 42) {
 			  // set up averages.
-			  for (var i = this.startNow; i < this.startNow + 20; i++) { this.sumNowSpeed += this.getSpeed(i) ; }
-			  for (var i = this.startSlow; i < this.startSlow + 20; i++) { this.sumSlowSpeed += this.getSpeed(i) ; }
+			  for (var i = this.startNow; i < this.startNow + 20; i++) { 
+				this.sumNowSpeed += this.getSpeed(i) ; 
+			  }
+			  for (var i = this.startSlow; i < this.startSlow + 20; i++) { 
+				this.sumSlowSpeed += this.getSpeed(i) ; 
+			  }
 			}
 
 			var rightNowSpeed = this.getSpeed(this.ind - 1);
@@ -55,7 +64,6 @@
 			var avgNow = this.sumNowSpeed / 20;
 			var avgSlow = this.sumSlowSpeed / 20;
 			var objFunc = avgNow - avgSlow;
-			//window.console.log(objFunc);
 			var averageSpeedIsReasonable = avgSlow < 18;
 			if (objFunc > 5 && averageSpeedIsReasonable) {
 				// You have slowed down significantly now trigger find parking.
@@ -98,7 +106,8 @@
 		Ctrl.prototype.getSpeed = function(i) {
 			// TODO: convert the units!
 			var msg = this.messages[i];
-			return msg.vehicle_status.speed;
+			var kph = msg.vehicle_status.speed;
+			return 0.621371 * kph;
 		};
 
 	 	Ctrl.prototype.curLatLong = function() {
@@ -157,6 +166,13 @@
 			ws.onclose = function(e) {
 				appendTxtNode('Socket closed');
 			};
+		}
+
+		function init3() {
+		  for (var i = 0; i < OUTPUT.length; i++) {
+		    var data = OUTPUT[i];
+		    onMessageHandler({data: JSON.stringify(data)});
+		  }
 		}
 
                 function init2() {
